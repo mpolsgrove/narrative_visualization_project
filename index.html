@@ -1,0 +1,469 @@
+<!DOCTYPE html>
+<script src="https://d3js.org/d3.v4.js"></script>
+ <head>
+    <title>Olympic Medals</title>
+    <style>
+      body {
+        background-color: #cccccc;
+      }
+    </style>
+  </head>
+  <body>
+    <div>
+        <div style="float:right">
+            <button id="return_button" onclick="loadMainGraph()">Return to Overview</button>
+            <br>
+            <span>Data from: <a href="https://www.kaggle.com/the-guardian/olympic-games" target="_blank">Kaggle</a></span>
+        </div>
+        <div id="description_div"></div>
+        <div id="line_graph_div"></div>
+    </div>
+  </body>
+<script>
+    var margin = 50,
+        width = 1200 - 2 * margin,
+        height = 675 - 2 * margin;
+    var years = [1896, 1900, 1904, 1908, 1912, 1916, 1920, 1924, 1928, 1932, 1936, 1940, 1944, 1948, 1952, 1956, 1960, 1964, 1968, 1972, 1976, 1980, 1984, 1988, 1992, 1996, 2000, 2004, 2008, 2012]
+    loadMainGraph()
+
+
+    function makeBold(element)
+    {
+        element.setAttribute("style","font-size:16")
+    }
+    function makeNotBold(element)
+    {
+        element.setAttribute("style","font-size:10")
+    }
+
+    function loadMainGraph()
+    {
+    var svg = d3.select("#line_graph_div")
+    svg.selectAll('*').remove();
+
+    description = document.getElementById("description_div");
+    description.innerHTML = "<h1>Total Olympic Medals Over Time</h1><p>Below are the total medal counts for each country for each Olympic Games from 1896 to 2012.</p><p>Click on a year tick to see the breakdowns of medal type for the top 12 medal earners that year. </p>"
+    var svg = d3.select("#line_graph_div")
+    .append("svg")
+        .attr("width", width + 2 * margin)
+        .attr("height", height + 2 * margin)
+    .append("g")
+        .attr("transform","translate(" + margin + "," + margin + ")");
+
+    d3.csv("https://raw.githubusercontent.com/mpolsgrove/narrative_visualization/master/medals_modified.csv", function(data) {
+
+        var countries_data_pre_filter = d3.nest() 
+            .key(function(d) { return d.Country;})
+            .entries(data);
+        var keep = []
+        countries_data_pre_filter.forEach(function callback(country_value,i){
+            keep[i] = false
+            country_value.values.forEach(function callback(year_value, j) {
+                if(year_value.Total > 20) keep[i] = true
+            })
+        })
+        var countries_data = []
+        keep.forEach(function callback(value, index){
+            if(value == true)
+            {
+                countries_data.push(countries_data_pre_filter[index])
+            }
+        })
+        var x = d3.scaleLinear()
+            .domain(d3.extent(data, function(d) { return d.Year; }))
+            .range([ 0, width ]);
+        var y = d3.scaleLinear()
+            .domain([0, d3.max(data, function(d) { return +(d.Total); })])
+            .range([ height, 0 ]);
+        svg.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x).tickValues(years));
+        svg.append("g")
+            .call(d3.axisLeft(y).ticks(10));
+
+        var ticks = document.getElementsByClassName("tick");
+        for (var i = 0; i < ticks.length; i ++) {
+            for(var j = 0; j < ticks[i].childNodes.length; j++)
+            {
+                childNode = ticks[i].childNodes[j];
+                if (childNode.nodeName == "text") {
+                    var year = parseInt(childNode.innerHTML.replace(/,/g, ''))
+                    if(year > 1800)
+                    {
+                        ticks[i].setAttribute("onclick","loadMedalsForYear(" + year + ");")
+                    }
+                }
+            }
+        }
+        var ticks = document.getElementsByClassName("tick");
+        for(var i = 0; i < ticks.length; i += 1){
+            ticks[i].setAttribute("onmouseover","makeBold(this)");
+            ticks[i].setAttribute("onmouseout","makeNotBold(this)");
+        }
+        for (var i = 0; i < ticks.length; i ++) {
+            for(var j = 0; j < ticks[i].childNodes.length; j++)
+            {
+                childNode = ticks[i].childNodes[j];
+                if (childNode.nodeName == "text") {
+                    var year = parseInt(childNode.innerHTML.replace(/,/g, ''))
+                    if(year > 1800)
+                    {
+                        ticks[i].setAttribute("onclick","loadMedalsForYear(" + year + ");")
+                    }
+                }
+            }
+        }
+
+        var res = countries_data.map(function(d){ return d.key })
+        var color = d3.scaleOrdinal()
+            .domain(res)
+            .range(["red","orange","green","blue","violet","darkred","darkorange","darkyellow","darkgreen","darkblue","darkviolet","gold","darkgrey","teal","darkpink"])
+
+        var lines = svg.selectAll(".line")
+            .data(countries_data)
+            .enter()
+            .append("path")
+                .attr("fill", "none")
+                .attr("stroke", function(d){ return color(d.key) })
+                .attr("stroke-width", 1)
+            .attr("d", function(d){
+            return d3.line()
+                .x(function(d) { return x(d.Year); })
+                .y(function(d) { return y(+(d.Total)); })
+                (d.values)
+            })
+
+        svg.selectAll("myDots")
+                .data(countries_data)
+                .enter()
+                .append('g')
+                .style("fill", function(d){ return color(d.key) })
+            .selectAll("myPoints")
+                .data(function(d){ return d.values })
+                .enter()
+                .append("circle")
+                .attr("cx", function(d) { return x(d.Year) } )
+                .attr("cy", function(d) { return y(d.Total) } )
+                .attr("r", 3)
+        var tooltip = d3.select("#line_graph_div") 
+            .append("div")
+            .style("opacity", 0)
+            .attr("class", "tooltip")
+            .style("background-color", "#cccccc")
+
+        lines.on("mouseover", 
+            function(d) {
+                this.setAttribute("stroke-width", 7);
+                this.setAttribute("onclick",("loadMedalsForCountry(\""+ d.key +"\")"))
+                tooltip.style("opacity", 1)
+            });
+        lines.on("mousemove",
+            function(d) {
+                this.setAttribute("stroke-width", 7);
+                tooltip
+                    .html("<p>Country: " + d.key + "</p>")
+                    .style("left", (d3.mouse(this)[0]+10) + "px")
+                    .style("top", (d3.mouse(this)[1]) + "px")
+            });
+        lines.on("mouseout", 
+            function(d) {
+                tooltip.style("opacity", 0)
+                this.setAttribute("onclick","")
+                this.setAttribute("stroke-width", 2);
+            });
+
+        //lines.on("mouseover", function(d){tooltip.text(d); return tooltip.style("visibility", "visible");)
+        //svg.append("rect")
+        //    .attr("height", 250)
+        //    .attr("width", 115)
+        //    .attr("x",380)
+        //    .attr("y",324)
+        //    .attr("fill","#cccccc")
+        //svg.append("rect")
+        //    .attr("height", 250)
+        //    .attr("width", 75)
+        //    .attr("x",151)
+        //    .attr("y",324)
+        //    .attr("fill","#cccccc")
+
+        svg.append("text")
+                .attr("x", 290)             
+                .attr("y", 0)
+                .attr("text-anchor", "middle")  
+                .style("font-size", "16") 
+                .text("1904 Olympics in St. Louis saw vast majority of athletes from North America");
+        svg.append("text")
+                .attr("x", 240)             
+                .attr("y", 160)
+                .attr("text-anchor", "middle")  
+                .style("font-size", "16") 
+                .text("1916 Olympics cancelled due to WWI");
+        svg.append("text")
+                .attr("x", 450)             
+                .attr("y", 230)
+                .attr("text-anchor", "middle")  
+                .style("font-size", "16") 
+                .text("1940, 1944 Olympics cancelled due to WWII");
+        svg.append("text")
+                .attr("x", 800)             
+                .attr("y", 120)
+                .attr("text-anchor", "middle")  
+                .style("font-size", "16") 
+                .text("Cold War saw rivalry between US and USSR");
+    })
+    }
+
+function loadMedalsForYear(year)
+{
+    if(year == 1916 || year == 1940 || year == 1944)
+    {
+        return
+    }
+    var svg = d3.select("#line_graph_div")
+    svg.selectAll('*').remove();
+    description = document.getElementById("description_div");
+    description.innerHTML = "<h1>Olympic Medals In " + 
+        year +
+        "</h1><p>Below are the total medal counts for each country broken down by gold, silver, and bronze for the year " + year + ".</p><p>Click on a country to see the breakdowns of medal type for that country over time.</p>"
+    if (year == 1980){
+    description.innerHTML = "<h1>Olympic Medals In " + 
+        year +
+        "</h1><p>Below are the total medal counts for each country broken down by gold, silver, and bronze for the year " + year 
+            + ".</p><p>Click on a country to see the breakdowns of medal type for that country over time.</p>"
+            +"<p>The United States and certain other countries were absent due to boycott.</p>"
+
+    }
+    if (year == 1984){
+    description.innerHTML = "<h1>Olympic Medals In " + 
+        year +
+        "</h1><p>Below are the total medal counts for each country broken down by gold, silver, and bronze for the year " + year 
+            + ".</p><p>Click on a country to see the breakdowns of medal type for that country over time.</p>"
+            +"<p>The Soviet Union and certain other countries were absent due to boycott.</p>"
+
+    }
+    d3.csv("https://raw.githubusercontent.com/mpolsgrove/narrative_visualization/master/medals_modified.csv", function(data) {
+
+        var countries_data = d3.nest() 
+            .key(function(d) { return d.Country;})
+            .entries(data);
+        var year_values = []
+        countries_data.forEach(function callback(value, index){
+            var country_data = countries_data[index];
+            var year_data
+            country_data.values.forEach(function callback(year_value,i) {
+                if(year_value.Year == year){
+                    year_data = year_value
+                }
+            })
+            year_values.push(year_data)
+        })
+        year_values.sort(function(a, b) {
+            return parseInt(b.Total) - parseInt(a.Total);
+        });
+        year_values_filtered = year_values.slice(0,12);
+        year_values_filtered.forEach(function callback(value, index){
+            var year_data = year_values[index]
+            var data
+            if (year_data){
+                data = [year_data.Bronze, year_data.Silver, year_data.Gold];
+            }
+            else{
+                data = [0,0,0]
+            }
+            var margin = 10,
+                width =  275 - 2 * margin,
+                height = 275 - 2 * margin;
+            var svg = d3.select("#line_graph_div")
+                .append("svg")
+                    .attr("width", width + 2 * margin)
+                    .attr("height", height + 2 * margin)
+                    .attr("onclick","loadMedalsForCountry(\"" + year_data.Country + "\");")
+                .append("g")
+                    .attr("transform", "translate(" + margin + "," + margin + ")")
+            svg.append("text")
+                .attr("x", width/2 - 25)             
+                .attr("y", 0 + (margin / 2))
+                .attr("text-anchor", "middle")  
+                .style("font-size", "16px") 
+                .text(year_data.Country);
+
+            var color = ['#624607','grey','#EEBC1D'];
+            var pie = d3.pie();
+            var arc = d3.arc().innerRadius(70).outerRadius(100);
+            svg.selectAll("path")
+                .data(pie(data))
+                .enter()
+                .append("path")
+                    .attr("transform","translate(100,+" + (100 +  2 * margin) +")")
+                    .attr("d",arc)
+                    .attr("stroke", "black")
+                    .style("stroke-width", "2px")
+                    .attr("fill",function(d,i){return color[i];});
+
+            svg.append("text")
+                .attr("x", 100)             
+                .attr("y", 120)
+                .attr("text-anchor", "middle")  
+                .style("font-size", "24px") 
+                .style("text-decoration", "bold")
+                .text(year_data.Total);
+        })
+    })
+}
+
+function loadMedalsForCountry(country)
+{
+    var svg = d3.select("#line_graph_div")
+    svg.selectAll('*').remove();
+
+    description = document.getElementById("description_div");
+    description.innerHTML = "<h1>Olympic Medals For " + 
+        country +
+        "</h1><p>Below are the total medal counts for  "+ country + " broken down by gold, silver, and bronze over time.</p><p>Click on a year tick to see the breakdowns of medal type for the top 12 medal earners that year. </p>"
+
+    d3.csv("https://raw.githubusercontent.com/mpolsgrove/narrative_visualization/master/medals_modified.csv", function(data) {
+
+        var countries_data_pre_filter = d3.nest() 
+            .key(function(d) { return d.Country;})
+            .entries(data);
+        var keep = []
+        countries_data_pre_filter.forEach(function callback(country_value,i){
+            keep[i] = false
+            country_value.values.forEach(function callback(year_value, j) {
+                if(year_value.Country.includes(country)) keep[i] = true
+            })
+        })
+        var countries_data = []
+        keep.forEach(function callback(value, index){
+            if(value == true)
+            {
+                countries_data.push(countries_data_pre_filter[index])
+            }
+        })
+        var year_values = countries_data[0].values
+
+        var svg = d3.select("#line_graph_div")
+        .append("svg")
+            .attr("width", width + 2 * margin)
+            .attr("height", height + 2 * margin)
+        .append("g")
+            .attr("transform", "translate(" + margin + "," + margin + ")");
+
+        var x = d3.scaleLinear()
+            .domain(d3.extent(data, function(d) { return d.Year; }))
+            .range([ 0, width ]);
+        var y = d3.scaleLinear()
+            .domain([0, d3.max(year_values, function(d) { return Math.max(d.Gold, d.Silver, d.Bronze) })])
+            .range([ height, 0 ]);
+        svg.append("g")
+            .attr("transform", "translate(0," + height + ")")
+            .call(d3.axisBottom(x).tickValues(years));
+        svg.append("g")
+            .call(d3.axisLeft(y).ticks(10));
+
+        var ticks = document.getElementsByClassName("tick");
+        for (var i = 0; i < ticks.length; i ++) {
+            for(var j = 0; j < ticks[i].childNodes.length; j++)
+            {
+                childNode = ticks[i].childNodes[j];
+                if (childNode.nodeName == "text") {
+                    var year = parseInt(childNode.innerHTML.replace(/,/g, ''))
+                    if(year > 1800)
+                    {
+                        ticks[i].setAttribute("onclick","loadMedalsForYear(" + year + ");")
+                    }
+                }
+            }
+        }
+
+        svg.append("path")
+            .datum(year_values)
+            .attr("fill", "none")
+            .attr("stroke", "#624607")
+            .attr("stroke-width", 2)
+            .attr("d",d3.line()
+                .x(function(d) { return x(d.Year); })
+                .y(function(d) { return y(d.Bronze); })
+            )
+        svg.append("path")
+            .datum(year_values)
+            .attr("fill", "none")
+            .attr("stroke", "grey")
+            .attr("stroke-width", 2)
+            .attr("d",d3.line()
+                .x(function(d) { return x(d.Year); })
+                .y(function(d) { return y(d.Silver); })
+            )
+        svg.append("path")
+            .datum(year_values)
+            .attr("fill", "none")
+            .attr("stroke", "#EEBC1D")
+            .attr("stroke-width", 2)
+            .attr("d",d3.line()
+                .x(function(d) { return x(d.Year); })
+                .y(function(d) { return y(d.Gold); })
+            )
+        svg.append("g")
+            .selectAll("dot")
+            .data(year_values)
+            .enter()
+            .append("circle")
+                .attr("cx", function(d) { return x(d.Year) } )
+                .attr("cy", function(d) { return y(d.Bronze) } )
+                .attr("r", 3)
+                .attr("fill", "#624607")
+        svg.append("g")
+            .selectAll("dot")
+            .data(year_values)
+            .enter()
+            .append("circle")
+                .attr("cx", function(d) { return x(d.Year) } )
+                .attr("cy", function(d) { return y(d.Silver) } )
+                .attr("r", 3)
+                .attr("fill", "#grey")
+        svg.append("g")
+            .selectAll("dot")
+            .data(year_values)
+            .enter()
+            .append("circle")
+                .attr("cx", function(d) { return x(d.Year) } )
+                .attr("cy", function(d) { return y(d.Gold) } )
+                .attr("r", 3)
+                .attr("fill", "#EEBC1D")
+
+        svg.append("rect")
+            .attr("height", 450)
+            .attr("width", 115)
+            .attr("x",380)
+            .attr("y",123)
+            .attr("fill","#cccccc")
+        svg.append("rect")
+            .attr("height", 450)
+            .attr("width", 75)
+            .attr("x",151)
+            .attr("y",123)
+            .attr("fill","#cccccc")
+
+        if(country.includes("Soviet Union"))
+        {
+            svg.append("text")
+                    .attr("x", 900)             
+                    .attr("y", 60)
+                    .attr("text-anchor", "middle")  
+                    .style("font-size", "16") 
+                    .text("1984 Olympic Boycott");
+        }
+        if(country.includes("United States"))
+        {
+            svg.append("text")
+                    .attr("x", 700)             
+                    .attr("y", 140)
+                    .attr("text-anchor", "middle")  
+                    .style("font-size", "16") 
+                    .text("1980 Olympic Boycott");
+        }
+    })
+
+}
+
+</script>
