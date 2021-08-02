@@ -50,7 +50,7 @@
     .append("g")
         .attr("transform","translate(" + margin + "," + margin + ")");
 
-    d3.csv("https://raw.githubusercontent.com/mpolsgrove/narrative_visualization/master/medals_modified.csv", function(data) {
+    d3.csv("https://raw.githubusercontent.com/mpolsgrove/narrative_visualization_project/master/medals_modified.csv", function(data) {
 
         var countries_data_pre_filter = d3.nest() 
             .key(function(d) { return d.Country;})
