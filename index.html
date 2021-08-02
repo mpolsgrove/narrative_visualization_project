@@ -253,7 +253,7 @@ function loadMedalsForYear(year)
             +"<p>The Soviet Union and certain other countries were absent due to boycott.</p>"
 
     }
-    d3.csv("https://raw.githubusercontent.com/mpolsgrove/narrative_visualization/master/medals_modified.csv", function(data) {
+    d3.csv("https://raw.githubusercontent.com/mpolsgrove/narrative_visualization_project/master/medals_modified.csv", function(data) {
 
         var countries_data = d3.nest() 
             .key(function(d) { return d.Country;})
@@ -334,7 +334,7 @@ function loadMedalsForCountry(country)
         country +
         "</h1><p>Below are the total medal counts for  "+ country + " broken down by gold, silver, and bronze over time.</p><p>Click on a year tick to see the breakdowns of medal type for the top 12 medal earners that year. </p>"
 
-    d3.csv("https://raw.githubusercontent.com/mpolsgrove/narrative_visualization/master/medals_modified.csv", function(data) {
+    d3.csv("https://raw.githubusercontent.com/mpolsgrove/narrative_visualization_project/master/medals_modified.csv", function(data) {
 
         var countries_data_pre_filter = d3.nest() 
             .key(function(d) { return d.Country;})
