@@ -172,20 +172,6 @@
                 this.setAttribute("stroke-width", 2);
             });
 
-        //lines.on("mouseover", function(d){tooltip.text(d); return tooltip.style("visibility", "visible");)
-        //svg.append("rect")
-        //    .attr("height", 250)
-        //    .attr("width", 115)
-        //    .attr("x",380)
-        //    .attr("y",324)
-        //    .attr("fill","#cccccc")
-        //svg.append("rect")
-        //    .attr("height", 250)
-        //    .attr("width", 75)
-        //    .attr("x",151)
-        //    .attr("y",324)
-        //    .attr("fill","#cccccc")
-
         svg.append("text")
                 .attr("x", 290)             
                 .attr("y", 0)
@@ -362,6 +348,11 @@ function loadMedalsForCountry(country)
             .call(d3.axisLeft(y).ticks(10));
 
         var ticks = document.getElementsByClassName("tick");
+        var ticks = document.getElementsByClassName("tick");
+        for(var i = 0; i < ticks.length; i += 1){
+            ticks[i].setAttribute("onmouseover","makeBold(this)");
+            ticks[i].setAttribute("onmouseout","makeNotBold(this)");
+        }
         for (var i = 0; i < ticks.length; i ++) {
             for(var j = 0; j < ticks[i].childNodes.length; j++)
             {
@@ -430,19 +421,6 @@ function loadMedalsForCountry(country)
                 .attr("cy", function(d) { return y(d.Gold) } )
                 .attr("r", 3)
                 .attr("fill", "#EEBC1D")
-
-        svg.append("rect")
-            .attr("height", 450)
-            .attr("width", 115)
-            .attr("x",380)
-            .attr("y",123)
-            .attr("fill","#cccccc")
-        svg.append("rect")
-            .attr("height", 450)
-            .attr("width", 75)
-            .attr("x",151)
-            .attr("y",123)
-            .attr("fill","#cccccc")
 
         if(country.includes("Soviet Union"))
         {
